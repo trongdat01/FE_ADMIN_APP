@@ -1,9 +1,13 @@
-import { createRoot } from 'react-dom/client'
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import App from './App'
 import './index.css'
-import App from './App.tsx'
+
 // Import connection test utilities (for browser console)
 import './utils/connection-test'
 
-createRoot(document.getElementById('root')!).render(
-  <App />
+ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
 )

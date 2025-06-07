@@ -1,21 +1,17 @@
-import { useEffect } from 'react'
-import { useCountStore } from './stores/common.store';
-import { RouterProvider } from 'react-router-dom';
-import { router } from './routes';
+import { RouterProvider, createBrowserRouter } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import { routes } from './routes/main.route';
 import './App.css'
 
 function App() {
-  const { count: countFromStore } = useCountStore();
-
-
-  useEffect(() => {
-
-  }, [])
+  const router = createBrowserRouter(routes);
 
   return (
-    <div className="App">
-      <RouterProvider router={router} />
-    </div>
+    <AuthProvider>
+      <div className="App">
+        <RouterProvider router={router} />
+      </div>
+    </AuthProvider>
   )
 }
 
