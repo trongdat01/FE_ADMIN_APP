@@ -1,25 +1,26 @@
 import axios from 'axios';
 import type { LoginRequest, LoginResponse } from '../types/auth.types';
 
-const API_BASE_URL = 'http://localhost:8888/api';
-
+// Create an instance of axios
 const api = axios.create({
-    baseURL: API_BASE_URL,
+    baseURL: 'http://localhost:8888/api',
     headers: {
-        'Content-Type': 'application/json',
-    },
+        'Content-Type': 'application/json'
+    }
 });
 
-// Add request interceptor to include token
+// Add a request interceptor to include the token
 api.interceptors.request.use(
-    (config) => {
+    config => {
         const token = localStorage.getItem('accessToken');
         if (token) {
-            config.headers['Authorization'] = `Bearer ${token}`;
+            config.headers.Authorization = `Bearer ${token}`;
         }
         return config;
     },
-    (error) => Promise.reject(error)
+    error => {
+        return Promise.reject(error);
+    }
 );
 
 export const authService = {
@@ -29,4 +30,5 @@ export const authService = {
     }
 };
 
+// Export the API instance
 export default api;

@@ -1,40 +1,37 @@
 import React, { useEffect, useState } from 'react';
-import { checkConnection } from '../../api';
-
-interface BackendInfo {
-    origin?: string;
-    timestamp?: string;
-    [key: string]: any;
-}
-
-interface ConnectionResult {
-    connected: boolean;
-    status?: number;
-    data?: BackendInfo;
-    message: string;
-    error?: any;
-}
+import axios from 'axios';
 
 const ConnectionStatus: React.FC = () => {
-    const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
-    const [backendInfo, setBackendInfo] = useState<BackendInfo | null>(null);
-    const [connectionResult, setConnectionResult] = useState<ConnectionResult | null>(null);
+    const [status, setStatus] = useState<'loading' | 'connected' | 'error'>('loading');
+    const [responseTime, setResponseTime] = useState<number | null>(null);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     const testConnection = async () => {
-        setConnectionStatus('connecting');
-        try {
-            const result = await checkConnection();
-            setConnectionResult(result);
+        setStatus('loading');
+        setErrorMessage(null);
 
-            if (result.connected) {
-                setConnectionStatus('connected');
-                setBackendInfo(result.data || null);
-            } else {
-                setConnectionStatus('error');
-            }
+        const startTime = performance.now();
+
+        try {
+            // Use /api/health endpoint or whatever health check endpoint you have
+            await axios.get('http://localhost:8888/api/health', { timeout: 5000 });
+
+            const endTime = performance.now();
+            setResponseTime(Math.round(endTime - startTime));
+            setStatus('connected');
         } catch (error) {
-            console.error('Connection test failed:', error);
-            setConnectionStatus('error');
+            setStatus('error');
+            if (axios.isAxiosError(error)) {
+                if (error.code === 'ECONNABORTED') {
+                    setErrorMessage('Connection timeout. Backend server is not responding.');
+                } else if (!error.response) {
+                    setErrorMessage('Cannot connect to the backend server. Is it running?');
+                } else {
+                    setErrorMessage(`Error: ${error.response.status} - ${error.response.statusText}`);
+                }
+            } else {
+                setErrorMessage('An unexpected error occurred');
+            }
         }
     };
 
@@ -43,75 +40,64 @@ const ConnectionStatus: React.FC = () => {
     }, []);
 
     return (
-        <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-gray-800">🔌 Backend Connection Status</h2>
+        <div className="bg-white shadow rounded-lg p-6">
+            <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-medium">Backend Connection Status</h3>
                 <button
                     onClick={testConnection}
-                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                    className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
                 >
-                    🔄 Test Again
+                    Test Again
                 </button>
             </div>
 
-            {connectionStatus === 'connecting' && (
-                <div className="flex items-center text-orange-600">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-600 mr-3"></div>
-                    <p>🔄 Đang kết nối Backend...</p>
-                </div>
-            )}
-
-            {connectionStatus === 'connected' && backendInfo && (
-                <div className="text-green-600 space-y-3">
-                    <p className="font-medium">✅ Kết nối Backend thành công!</p>
-                    <div className="text-sm space-y-1">
-                        <p><span className="font-medium">📡 Origin:</span> {backendInfo.origin || 'N/A'}</p>
-                        <p><span className="font-medium">⏰ Timestamp:</span> {backendInfo.timestamp || 'N/A'}</p>
-                        <p><span className="font-medium">🔢 Status:</span> {connectionResult?.status}</p>
-                    </div>
-                    <details className="mt-4">
-                        <summary className="cursor-pointer font-medium text-gray-700 hover:text-gray-900">
-                            📊 Backend Info (Click to expand)
-                        </summary>
-                        <pre className="mt-2 p-3 bg-gray-50 rounded text-xs text-gray-600 overflow-auto">
-                            {JSON.stringify(backendInfo, null, 2)}
-                        </pre>
-                    </details>
-                </div>
-            )}
-
-            {connectionStatus === 'error' && (
-                <div className="text-red-600 space-y-3">
-                    <p className="font-medium">❌ Lỗi kết nối Backend!</p>
-                    <div className="text-sm">
-                        <p><span className="font-medium">Lỗi:</span> {connectionResult?.message}</p>
-                        <p className="text-gray-600 mt-2">
-                            💡 <strong>Troubleshooting:</strong>
-                        </p>
-                        <ul className="list-disc list-inside text-gray-600 text-xs mt-1 space-y-1">
-                            <li>Đảm bảo backend đang chạy tại <code className="bg-gray-100 px-1 rounded">http://localhost:8888</code></li>
-                            <li>Kiểm tra CORS configuration</li>
-                            <li>Xem browser console và backend terminal logs</li>
-                        </ul>
-                    </div>
-                    {connectionResult?.error && (
-                        <details className="mt-4">
-                            <summary className="cursor-pointer font-medium text-gray-700 hover:text-gray-900">
-                                🔍 Error Details
-                            </summary>
-                            <pre className="mt-2 p-3 bg-red-50 rounded text-xs text-red-600 overflow-auto">
-                                {JSON.stringify(connectionResult.error, null, 2)}
-                            </pre>
-                        </details>
+            <div className="flex items-center space-x-4">
+                <div className="flex-shrink-0">
+                    {status === 'loading' && (
+                        <div className="h-8 w-8 rounded-full border-2 border-t-indigo-600 animate-spin"></div>
+                    )}
+                    {status === 'connected' && (
+                        <div className="h-8 w-8 bg-green-500 rounded-full flex items-center justify-center">
+                            <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                        </div>
+                    )}
+                    {status === 'error' && (
+                        <div className="h-8 w-8 bg-red-500 rounded-full flex items-center justify-center">
+                            <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </div>
                     )}
                 </div>
-            )}
 
-            <div className="mt-4 p-3 bg-blue-50 rounded text-sm text-blue-800">
-                <p><strong>📋 Backend Info:</strong></p>
-                <p>• URL: <code>http://localhost:8888/api</code></p>
-                <p>• Health Endpoint: <code>/health</code></p>
-                <p>• CORS: Enabled</p>
+                <div>
+                    {status === 'loading' && <p className="text-gray-500">Checking connection...</p>}
+
+                    {status === 'connected' && (
+                        <div>
+                            <p className="text-green-600 font-medium">Connected to backend successfully</p>
+                            {responseTime !== null && (
+                                <p className="text-sm text-gray-500">Response time: {responseTime} ms</p>
+                            )}
+                        </div>
+                    )}
+
+                    {status === 'error' && (
+                        <div>
+                            <p className="text-red-600 font-medium">Connection failed</p>
+                            {errorMessage && <p className="text-sm text-gray-700">{errorMessage}</p>}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            <div className="mt-4 text-sm">
+                <p className="text-gray-600">
+                    Connection URL:{' '}
+                    <code className="bg-gray-100 px-2 py-1 rounded">http://localhost:8888/api</code>
+                </p>
             </div>
         </div>
     );
